@@ -1,0 +1,140 @@
+Phase 1 – Core data layer + basic job ingestion (3–5 days)
+Goals:
+
+Set up Supabase project and DB schema (resumes, jobs, applications, match_profiles, config).
+
+Implement:
+
+discover_jobs() using JSearch (or another API).
+
+Save jobs to DB.
+
+Write a simple script to:
+
+Fetch N jobs.
+
+Print them.
+
+Deliverables:
+
+Working DB schema.
+
+Script that populates jobs table daily.
+
+Phase 2 – Resume ingestion & parsing (3–5 days)
+Goals:
+
+Build a small module to:
+
+Upload resume PDFs (via Streamlit or CLI).
+
+Parse text (PyPDF2 / pdfplumber).
+
+Optionally extract skills (spaCy + custom patterns).
+
+Store parsed text and basic metadata in resumes.
+
+Deliverables:
+
+Ability to upload multiple resumes, view parsed text in DB/UI.
+
+Phase 3 – Matching & scoring MVP (5–7 days)
+Goals:
+
+Implement a basic matcher:
+
+Embed resume and JD text (sentence-transformers).
+
+Compute cosine similarity.
+
+Add a simple keyword overlap score.
+
+Create match_profiles entries for (resume, job) pairs.
+
+Expose scores in a simple Streamlit table.
+
+Deliverables:
+
+For each job, you can see a fit score and basic overlap info.
+
+Phase 4 – Application execution for 1–2 ATS types (7–10 days)
+Goals:
+
+Pick 1–2 ATS providers you encounter often (e.g., Greenhouse, Lever).
+
+Implement apply_job_greenhouse() and/or apply_job_lever() using Playwright:
+
+Load job URL.
+
+Fill standard fields.
+
+Upload resume.
+
+Optionally generate a short cover letter via LLM.
+
+Stop before final submit (or implement full submit if you’re comfortable).
+
+Deliverables:
+
+End‑to‑end test: given a job URL + resume, the script can fill the form reliably.
+
+Phase 5 – Daily orchestrator + config (3–5 days)
+Goals:
+
+Implement the daily job function:
+
+Discover jobs.
+
+Compute matches.
+
+Filter out already applied.
+
+Select top N by score.
+
+Call apply_job() for each.
+
+Add config table:
+
+daily_apply_limit
+
+min_score_threshold
+
+require_human_confirmation
+
+Schedule via cron or GCP Cloud Scheduler.
+
+Deliverables:
+
+Fully automated daily run (with optional human confirmation).
+
+Phase 6 – Frontend dashboard (5–7 days)
+Goals:
+
+Build a Streamlit app with:
+
+Overview page: KPIs, charts.
+
+Jobs page: filterable table with scores, status.
+
+Resumes page: upload, manage.
+
+Settings page: edit config.
+
+Connect to Supabase.
+
+Deliverables:
+
+A usable UI to monitor and control the agent.
+
+Phase 7 – Hardening & advanced features (ongoing)
+Possible enhancements:
+
+Multi‑resume, multi‑domain support (e.g., “ML Engineer” vs “Data Engineer” resumes).
+
+More ATS providers.
+
+LLM‑generated gap analysis and tailored cover letters.
+
+Telegram/Slack notifications: “Today I applied to X jobs; here’s the summary.”
+
+Optional: wrap parts in LangGraph or OpenClaw if you want a more “agent‑native” architecture later.

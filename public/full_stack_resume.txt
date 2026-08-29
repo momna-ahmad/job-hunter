@@ -1,0 +1,57 @@
+                              MOMINA AHMAD
+                                      Software Engineer
+   0305 4049768              momnaahmdd@gmail.com                   Lahore    https://github.com/momna-ahmad
+
+
+
+EDUCATION
+BSc. Software Engineering
+COMSATS Lahore 3.3 CGPA
+
+
+SKILLS
+  Languages: Python, JavaScript, Typescript, Java, SQL, C++
+  Backend/Database: Node, Express, PostgreSQL, Supabase, Firebase, mySQL
+  Frontend: React, Next.js, Redux, HTML5, CSS3, Tailwind CSS, responsive UI design
+  Tools & Platforms: Git, GitHub, Postman, Vercel, Firebase, Supabase, Stripe, Docker, Expo
+
+
+Experience
+CliniConnect | Freelance                Jan 2026 - July 2026
+
+  Designed and developed a full-stack healthcare platform connecting patients with healthcare providers.
+  Built responsive web and cross-platform mobile applications using React, React Native and Expo.
+  Implemented secure authentication, role-based authorization, and Row-Level Security using Supabase.
+  Integrated Jitsi Meet for secure real-time video consultations.
+  Developed appointment scheduling, payment processing, escrow payout workflow.
+  Built backend APIs and database workflows using Supabase Edge Functions and PostgreSQL.
+  Implemented retry mechanisms and scheduled background jobs for payment reliability.
+
+Bitbash | Full Stack Development Intern          Jan 2026 - Feb 2026
+  Developed automated job-scraping workflows using SeleniumBase and Playwright, combining API-driven
+  extraction via GraphQL with browser-based HTML scraping for different site structures.
+  Improved scraping throughput by reusing persistent browser sessions, multithreading requests, and reducing
+  scrape intervals.
+
+PROJECTS
+Decentralized Equity-Crowdfunding Platform Next, TypeScript, Supabase, Solidity , Ethereum
+   Developing a decentralized investment platform connecting business owners with investors.
+   Using blockchain smart contracts to facilitate transparent and secure investments.
+   Developed an AI-powered investor insights module that analyzes business pitches using Large
+   Language Models (LLMs)to generate investment risk assessments and key business insights
+Rental Platform       Next, TypeScript, Supabase, React, Node
+   Developed a web platform for listing homes, vehicles, and halls for rent, enabling users to
+   create and browse rental opportunities.
+    Integrated Supabase Auth, Google sign-in for easier onboardingand real-time chat using
+   Socket.io to facilitate lister and buyer communication
+
+Mentorship Platform        React, Node, Stripe, JWT
+
+   Developed a mentorship platform for students to connect with mentors offering career guidance.
+   Integrated authentication with Auth0 to manage secure user access and implemented payments
+   with Stripe & Stripe Connect, enabling mentors to receive payments for priority services
+Home Services Mobile App Flutter, Firebase
+   Developed app for users to post jobs and job viewing and professsionals to view and request to
+   complete them(job marketplace model).
+   Integrated Flutter maps and LocationIQ for search by location enabling service matching
+

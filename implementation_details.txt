@@ -1,0 +1,355 @@
+2.1. Job Discovery Layer
+Goal: Get a stream of job listings with: title, company, location, URL, description (or at least a link), source, timestamp.
+Options:
+Job search APIs
+JSearch (RapidAPI) - Google for Jobs wrapper; returns structured listings with URLs.
+Adzuna / The Muse / USAJobs / other niche APIs - depending on region/industry.
+Pros: Stable, less ToS risk than scraping LinkedIn directly.
+Cons: May have quotas, cost, or limited fields.
+Scraping / crawling
+Firecrawl - URL : clean markdown; good for extracting JD text from company career pages once you have URLs.
+Apify actors (e.g., LinkedIn/Indeed scrapers) - managed scraping, but watch ToS.
+
+Custom scrapers with Playwright or Scrapy - full control, more work.
+
+Aggregators / alerts
+
+RSS feeds, email alerts, saved searches from job boards, then parse those.
+
+Recommended for you:
+
+Primary: JSearch (or similar) for discovery.
+
+Secondary: Firecrawl to fetch full JD text from the job URL when needed for matching.
+
+Avoid aggressive LinkedIn scraping from your main account; use Google for Jobs as an intermediary.
+NOTES: what if i only scrape 1 job/per hour from linked and indeed. how to avoid scraping the very 
+first job everytime. also whatsapp automation to look for jobs posted in the group. if not viable
+how about simple job search on google 
+FINAL:
+Google Jobs (JSearch)
+
+Indeed (careful, low volume)
+
+WhatsApp group
+
+Maybe a few company career pages you care about.
+
+2.2. Storage & Tracking Layer
+Goal: Persist:
+
+Resumes (multiple versions, domains).
+
+Jobs (with metadata, JD text, source).
+
+Applications (status, date, job_id, resume_id, notes).
+
+Match profiles (scores, overlaps, gaps).
+
+Config (daily apply limit, target roles, locations, etc.).
+
+Options:
+
+Relational DB
+
+Supabase Postgres – you already know it; great for structured data + auth if you add login later.
+
+PostgreSQL on GCP (Cloud SQL) – similar, more infra to manage.
+
+NoSQL
+
+MongoDB / Firestore – flexible schema, but you’ll likely want relational joins (jobs ↔ applications ↔ resumes).
+
+Vector DB (optional but useful)
+
+Chroma / Qdrant / pgvector (Supabase) – store embeddings of resumes and JDs for semantic matching.
+
+Recommended:
+
+Supabase Postgres as primary DB.
+
+Enable pgvector extension if you want semantic similarity inside the DB.
+
+Store:
+
+resumes (id, file_path, domain, parsed_text, embedding).
+
+jobs (id, title, company, location, url, source, jd_text, embedding, fetched_at).
+
+applications (id, job_id, resume_id, status, applied_at, notes).
+
+match_profiles (id, job_id, resume_id, overall_score, skill_overlap_json, gap_analysis_json, created_at).
+
+config (user_id, daily_apply_limit, target_roles, locations, etc.).
+sql with orm?
+
+
+2.3. Matching & Scoring Layer
+Goal: For each (resume, job) pair, compute:
+
+Overall fit score (0–100).
+
+Skill overlap (which required skills you have / missing).
+
+Seniority/title alignment.
+
+Optional: gap analysis and suggestions.
+
+Approaches:
+
+Keyword + TF‑IDF + cosine similarity
+
+Extract keywords from JD and resume.
+
+Use TF‑IDF vectors and cosine similarity.
+
+Simple, fast, interpretable.
+
+Embedding‑based semantic similarity
+
+Embed resume and JD sections with a model (e.g., sentence-transformers, OpenAI embeddings, etc.).
+
+Compute cosine similarity between embeddings.
+
+Better at capturing synonyms and semantic overlap.
+
+Hybrid scoring
+
+Combine:
+
+Keyword overlap score (e.g., 40%).
+
+Semantic similarity score (e.g., 35%).
+
+Seniority/title alignment (e.g., 15%).
+
+Domain/industry match (e.g., 10%).
+
+This mirrors commercial matchers.
+
+LLM‑based scoring
+
+Prompt an LLM with resume + JD → structured JSON: score, matched skills, missing skills, reasoning.
+
+More flexible, but costlier and slower.
+
+Recommended:
+
+Start with a hybrid approach:
+
+Use sentence-transformers (e.g., all-MiniLM-L6-v2 or a stronger model) for embeddings + cosine similarity.
+
+Add a keyword overlap component using a simple skill extractor (spaCy + custom skill list).
+
+Optionally, use an LLM to generate a human‑readable “match summary” and gap analysis for the frontend.
+
+Implementation outline:
+
+Parse resume and JD into sections (skills, experience, education).
+
+Compute:
+
+semantic_score = cosine_similarity(resume_embedding, jd_embedding)
+
+keyword_score = overlap_count(required_skills, resume_skills) / len(required_skills)
+
+seniority_score based on title/years (simple heuristic or LLM).
+
+Combine into overall_score = w1*semantic + w2*keyword + w3*seniority.
+
+Store results in match_profiles.
+
+2.4. Application Execution Layer
+Goal: For selected jobs, submit applications via ATS forms.
+
+Reality check: This is the hardest, most brittle part. ATS systems vary widely (Workday, Greenhouse, Lever, iCIMS, custom).
+
+Options:
+
+Browser automation
+
+Playwright (Python) – best balance of power and maintainability.
+
+Selenium – older, more fragile for modern JS.
+
+Use persistent profiles/cookies to reduce repeated logins.
+
+ATS‑specific wrappers
+
+Some services offer APIs or helpers for specific ATS providers, but they’re limited.
+
+Semi‑automated / human‑in‑the‑loop
+
+Bot pre‑fills forms, then you review and click submit.
+
+Or bot prepares everything and sends you a link to a “review & submit” page.
+
+Recommended:
+
+Use Playwright (Python) as your execution engine.
+
+Design it as:
+
+apply_job(job_id, resume_id) function that:
+
+Loads job URL.
+
+Detects ATS type (by URL pattern / DOM heuristics).
+
+Maps your profile fields (name, email, LinkedIn, resume file, answers) to form fields.
+
+Fills them, uploads resume, optionally generates a tailored cover letter.
+
+Stops before final submit if you want human confirmation.
+
+Start by supporting 1–2 ATS providers (e.g., Greenhouse + Lever) where you can hard‑code selectors. Expand gradually.
+
+Log every step: success/failure, screenshots on error, timestamps.
+
+2.5. Orchestration / “Brain” Layer
+Goal: Daily job:
+
+Fetch N new jobs.
+
+Compute matches against your active resume(s).
+
+Filter out already‑applied jobs.
+
+Rank by score.
+
+Apply to up to daily_apply_limit jobs.
+
+Respect rate limits and safety rules.
+
+Framework options:
+
+LangGraph / LangChain agents
+
+Mature, lots of examples for multi‑step workflows.
+
+Good if you want a graph of states (discover → score → filter → apply).
+
+OpenClaw
+
+Self‑hosted agent framework; can orchestrate tools, browser, APIs.
+
+More experimental, smaller ecosystem, but fits your “self‑hosted agent” vision.
+
+Custom Python orchestrator
+
+Simple cron job / scheduled Cloud Function / GCP Cloud Run + scheduler.
+
+Direct Python code: no extra framework overhead.
+
+Recommended:
+
+Given your goals and background:
+
+Start with a custom Python orchestrator (simple, transparent, easy to debug).
+
+Later, if you want more “agent‑y” behavior (multi‑agent, memory, dynamic tool use), you can wrap parts in LangGraph or even experiment with OpenClaw as a higher‑level controller.
+Schedule this via:
+
+GCP Cloud Scheduler + Cloud Run
+
+Or a simple cron on a VM if you’re okay managing that.
+
+2.6. Frontend / Dashboard Layer
+Goal: A UI where you can:
+
+Set config: daily apply limit, target roles, locations, domains.
+
+Upload/manage multiple resumes (different domains).
+
+See:
+
+Total jobs discovered, applied, interviewing, offers.
+
+Daily/weekly application trends.
+
+Score distributions.
+
+Per‑job match profiles (skills overlap, gaps).
+
+Manually trigger runs, pause/resume automation.
+
+Options:
+
+Quick MVP
+
+Streamlit – pure Python, fast to build, great for dashboards.
+
+Gradio – similar, more model‑centric.
+
+More polished
+
+Next.js + FastAPI backend.
+
+React + Supabase (you can use Supabase auth + realtime if you want).
+
+BI tools
+
+Metabase / Superset on top of your Postgres DB for analytics.
+
+Recommended:
+
+MVP: Streamlit app connected to Supabase.
+
+Pages:
+
+“Overview”: KPIs, charts (applications per day, avg score, conversion rates).
+
+“Jobs”: table of jobs with filters, match scores, “view profile”.
+
+“Resumes”: upload, list, set active resume per domain.
+
+“Settings”: daily apply limit, min score threshold, target roles/locations.
+
+Later, if you want a production‑grade UI, rebuild in Next.js + React.
+
+Charts to include:
+
+Applications per day (line chart).
+
+Score distribution histogram.
+
+Status breakdown (applied, interviewing, rejected, offer).
+
+Top skills matched vs missing (bar charts).
+
+2.7. Observability & Safety Layer
+Goal: Avoid blowing up your accounts, keep things auditable.
+
+Must‑haves:
+
+Logging
+
+Structured logs (JSON) for each step: job fetched, match computed, apply attempted, result.
+
+Store logs in DB or a logging service.
+
+Error handling
+
+Retry logic for network errors.
+
+Screenshot capture on apply failures for debugging.
+
+Rate limiting
+
+Enforce max requests per minute to job APIs.
+
+Enforce max applications per hour/day.
+
+Human‑in‑the‑loop switches
+
+Config flag: require_human_confirmation (true/false).
+
+If true, the agent prepares applications but waits for your approval (via UI or Telegram/Slack message).
+
+Compliance
+
+Avoid aggressive scraping of protected sites from your main account.
+
+Prefer APIs and company career pages.
+
+Ensure all generated content is truthful and based on your real experience

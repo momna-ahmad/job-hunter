@@ -1,0 +1,7 @@
+Job Discovery Layer: fetches job listings from APIs / scrapers.
+Storage & Tracking Layer: DB for jobs, applications, resumes, logs.
+Matching & Scoring Layer: computes overlap between resume and JD.
+Application Execution Layer: fills forms / submits via ATS.
+Orchestration / Brain Layers: schedules daily runs, decides which jobs to apply to, enforces limits.
+Frontend / Dashboard Layer: UI for you to configure, monitor, and inspect.
+Observability & Safety Layer: logging, error handling, rate limits, human-in-the-loop controls.
