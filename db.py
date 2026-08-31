@@ -1,103 +1,66 @@
 import os
-import psycopg2
-from psycopg2.extras import RealDictCursor
-from contextlib import contextmanager
+import uuid
 from dotenv import load_dotenv
+from models import Config, Job, MatchProfile, Resume, RunLog
+from sqlalchemy import create_engine, select
+from sqlalchemy.orm import Session
 
 load_dotenv()
 
-DATABASE_URL = os.environ["DATABASE_URL"]
+engine = create_engine(
+    os.environ["DATABASE_URL"].replace(
+        "postgres://", "postgresql://"
+    )  # standard URL fix
+)
 
-@contextmanager
-def get_db_connection():
-    conn = psycopg2.connect(DATABASE_URL)
-    try:
-        yield conn
-    finally:
-        conn.close()
 
+# Generic Helper for inserts
+def insert_record(model_cls, data: dict):
+    with Session(engine) as session:
+        session.add(model_cls(**data))
+        session.commit()
+
+
+# Specific Inserts (1-liners reusing the helper)
+insert_job = lambda data: insert_record(Job, data)
+insert_match_profile = lambda data: insert_record(MatchProfile, data)
+insert_run_log = lambda data: insert_record(RunLog, data)
+
+
+# Queries
 def get_config():
-    with get_db_connection() as conn:
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("SELECT * FROM config ORDER BY updated_at DESC LIMIT 1")
-            row = cur.fetchone()
-            return dict(row) if row else None
+    with Session(engine) as session:
+        return session.scalars(
+            select(Config).order_by(Config.updated_at.desc()).limit(1)
+        ).first()
+
 
 def get_active_resume():
-    with get_db_connection() as conn:
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                SELECT * FROM resumes
-                ORDER BY created_at DESC
-                LIMIT 1
-            """)
-            row = cur.fetchone()
-            return dict(row) if row else None
+    with Session(engine) as session:
+        return session.scalars(
+            select(Resume).order_by(Resume.created_at.desc()).limit(1)
+        ).first()
+
 
 def job_exists_by_hash(job_key_hash: str) -> bool:
-    with get_db_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                "SELECT EXISTS(SELECT 1 FROM jobs WHERE job_key_hash = %s)",
-                (job_key_hash,),
-            )
-            return cur.fetchone()[0]
+    with Session(engine) as session:
+        stmt = select(
+            select(Job).where(Job.job_key_hash == job_key_hash).exists()
+        )
+        return bool(session.scalar(stmt))
 
-def insert_job(job: dict):
-    with get_db_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("""
-                INSERT INTO jobs (
-                    source, external_id, title, company, location,
-                    url, jd_text, job_key_hash
-                ) VALUES (
-                    %(source)s, %(external_id)s, %(title)s, %(company)s,
-                    %(location)s, %(url)s, %(jd_text)s, %(job_key_hash)s
-                )
-            """, job)
-            conn.commit()
-
-def insert_match_profile(profile: dict):
-    with get_db_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("""
-                INSERT INTO match_profiles (
-                    job_id, resume_id, overall_score,
-                    semantic_score, keyword_score,
-                    skill_overlap, gap_analysis
-                ) VALUES (
-                    %(job_id)s, %(resume_id)s, %(overall_score)s,
-                    %(semantic_score)s, %(keyword_score)s,
-                    %(skill_overlap)s, %(gap_analysis)s
-                )
-            """, profile)
-            conn.commit()
-
-def insert_run_log(log: dict):
-    with get_db_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("""
-                INSERT INTO run_logs (
-                    started_at, ended_at, jobs_discovered,
-                    jobs_deduped_skipped, matches_computed, errors
-                ) VALUES (
-                    %(started_at)s, %(ended_at)s, %(jobs_discovered)s,
-                    %(jobs_deduped_skipped)s, %(matches_computed)s, %(errors)s
-                )
-            """, log)
-            conn.commit()
 
 def get_jobs_without_match_profiles(resume_id: str, limit: int = 50):
-    with get_db_connection() as conn:
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                SELECT j.*
-                FROM jobs j
-                LEFT JOIN match_profiles mp
-                  ON j.id = mp.job_id AND mp.resume_id = %s
-                WHERE mp.id IS NULL
-                ORDER BY j.discovered_at DESC
-                LIMIT %s
-            """, (resume_id, limit))
-            rows = cur.fetchall()
-            return [dict(r) for r in rows]
+    with Session(engine) as session:
+        stmt = (
+            select(Job)
+            .outerjoin(
+                MatchProfile,
+                (Job.id == MatchProfile.job_id)
+                & (MatchProfile.resume_id == uuid.UUID(str(resume_id))),
+            )
+            .where(MatchProfile.id.is_(None))
+            .order_by(Job.discovered_at.desc())
+            .limit(limit)
+        )
+        return session.scalars(stmt).all()
