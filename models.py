@@ -1,5 +1,7 @@
 # models.py
 from datetime import datetime , timezone
+from typing import Any, Dict, List, Optional
+from typing_extensions import TypedDict
 import uuid
 from sqlalchemy import DateTime, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -16,6 +18,15 @@ from sqlalchemy import (
 class Base(DeclarativeBase):
   pass
 
+class AgentState(TypedDict):
+  active_resume: Optional[Dict[str, Any]]
+  config: Optional[Dict[str, Any]]
+  discovered_job_count: int
+  scored_jobs: List[Dict[str, Any]]  # [{job, match_score, ...}]
+  selected_jobs: List[Dict[str, Any]]  # Top N eligible for application
+  applied_jobs: List[str]  # IDs of jobs processed
+  requires_approval: bool
+  run_errors: List[str]
 
 class Job(Base):
   __tablename__ = "jobs"
@@ -46,6 +57,7 @@ class Config(Base):
     keywords: Mapped[list] = mapped_column(JSONB, default=list)
     locations: Mapped[list] = mapped_column(JSONB, default=list)
     min_score_threshold: Mapped[float] = mapped_column(Numeric, default=70.0)
+    require_human_confirmation: Mapped[bool] = mapped_column(default=True)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )
@@ -57,6 +69,7 @@ class Resume(Base):
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     file_path: Mapped[str] = mapped_column(Text)
+    is_active: Mapped[bool] = mapped_column(default=True)
     parsed_text: Mapped[str] = mapped_column(Text)
     skills: Mapped[list | None] = mapped_column(JSONB, default=None)
     created_at: Mapped[datetime] = mapped_column(

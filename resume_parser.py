@@ -82,9 +82,15 @@ def extract_skills_deterministic(text: str) -> List[str]:
 
   return sorted(list(found_skills))
 
+def sanitize_filename(name: str) -> str:
+  # Replace whitespace with underscores and strip non-alphanumeric chars (except . and -)
+  clean_name = re.sub(r"\s+", "_", name.strip())
+  return re.sub(r"[^a-zA-Z0-9_.-]", "", clean_name)
+
 def upload_pdf_to_storage(file_bytes: bytes, original_filename: str) -> str:
   """Uploads file to Supabase bucket and returns the object path."""
-  unique_name = f"{uuid.uuid4()}_{original_filename}"
+  clean_name = sanitize_filename(original_filename)
+  unique_name = f"{uuid.uuid4()}_{clean_name}"
   storage_path = f"raw/{unique_name}"
 
   res = supabase.storage.from_(BUCKET_NAME).upload(
@@ -119,9 +125,8 @@ def ingest_resume(
       )
 
     new_resume = Resume(
-        file_name=file_name,
-        storage_path=storage_path,
-        raw_text=raw_text,
+        file_path=file_name,
+        parsed_text=raw_text,
         skills=skills,
         is_active=set_as_active,
     )

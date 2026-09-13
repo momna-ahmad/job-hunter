@@ -17,7 +17,7 @@ if uploaded_files:
         try:
           file_bytes = uploaded_file.read()
           saved_record = ingest_resume(file_bytes, uploaded_file.name)
-          st.success(f"Saved: {saved_record.file_name}")
+          st.success(f"Saved: {saved_record.file_path}")
           st.write(f"**Detected Skills:** {', '.join(saved_record.skills)}")
         except Exception as e:
           st.error(f"Error processing {uploaded_file.name}: {e}")
@@ -31,10 +31,10 @@ with SessionLocal() as session:
   )
   for r in resumes:
     with st.expander(
-        f"{r.file_name} {'(ACTIVE)' if r.is_active else ''} - {r.created_at.strftime('%Y-%m-%d %H:%M')}"
+        f"{r.file_path} {'(ACTIVE)' if r.is_active else ''} - {r.created_at.strftime('%Y-%m-%d %H:%M')}"
     ):
-      st.markdown(f"**Storage Path:** `{r.storage_path}`")
+      st.markdown(f"**Storage Path:** `{r.file_path}`")
       st.markdown(f"**Extracted Skills:** {', '.join(r.skills)}")
       st.text_area(
-          "Parsed Raw Text", r.raw_text, height=150, key=f"txt_{r.id}"
+          "Parsed Raw Text", r.parsed_text, height=150, key=f"txt_{r.id}"
       )
